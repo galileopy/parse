@@ -1,0 +1,35 @@
+{
+  "name": "@galileopy/parse",
+  "version": "0.0.1",
+  "description": "Parse: A CLI tool using LLMs for code suggestions, debugging, and automation.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/galileopy/parse.git"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "codegen",
+    "code-helper"
+  ],
+  "engines": {
+    "node": "^22.16.0"
+  },
+  "author": "Galileo Sánchez",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/galileopy/parse/issues"
+  },
+  "homepage": "https://github.com/galileopy/parse#readme",
+  "devDependencies": {
+    "jest": "^30.0.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "xstream": "^11.14.0"
+  }
+}
