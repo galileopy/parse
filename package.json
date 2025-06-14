@@ -2,9 +2,14 @@
   "name": "@galileopy/parse",
   "version": "0.0.1",
   "description": "Parse: A CLI tool using LLMs for code suggestions, debugging, and automation.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "type": "commonjs",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build": "tsc",
+    "dev": "ts-node --watch src/index.ts",
+    "lint": "eslint 'src/**/*.{js,ts}' --fix",
+    "format": "prettier --write 'src/**/*.{js,ts}'"
   },
   "repository": {
     "type": "git",
@@ -26,10 +31,23 @@
   },
   "homepage": "https://github.com/galileopy/parse#readme",
   "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@eslint/json": "^0.12.0",
+    "@eslint/markdown": "^6.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.34.0",
+    "@typescript-eslint/parser": "^8.34.0",
+    "eslint": "^9.29.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "globals": "^16.2.0",
     "jest": "^30.0.0",
-    "typescript": "^5.8.3"
+    "prettier": "^3.5.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.0"
   },
   "dependencies": {
+    "@cycle/run": "^5.7.0",
     "xstream": "^11.14.0"
   }
 }

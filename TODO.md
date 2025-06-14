@@ -1,5 +1,8 @@
 ## Next Steps
 
+0. **Project Setup**
+   - Lint format and build settings
+
 1. **Initial Setup and Prototype**:
    - Implement the initial xstream dialog with an echo sink to test the basic event loop.
    - Set up the TypeScript project with `xstream` and `readline` for CLI input.
