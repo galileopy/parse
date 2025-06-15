@@ -4,10 +4,17 @@
   "description": "Parse: A CLI tool using LLMs for code suggestions, debugging, and automation.",
   "main": "dist/index.js",
   "type": "commonjs",
+  "bin": {
+    "parse": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "dev": "ts-node --watch src/index.ts",
+    "dev": "ts-node  src/index.ts",
     "lint": "eslint 'src/**/*.{js,ts}' --fix",
     "format": "prettier --write 'src/**/*.{js,ts}'"
   },
