@@ -25,7 +25,6 @@ export function makeREPLDriver(): REPLDriver {
       start(listener) {
         rl.on("line", (input: string) => {
           listener.next(input.trim());
-          rl.prompt(); // Show prompt after input
         });
       },
       stop() {
