@@ -23,25 +23,34 @@ export interface WriteParameters {
     | (ObjectEncodingOptions & {
         mode?: Mode | undefined;
         flag?: OpenMode | undefined;
-        /**
-         * If all data is successfully written to the file, and `flush`
-         * is `true`, `filehandle.sync()` is used to flush the data.
-         * @default false
-         */
         flush?: boolean | undefined;
       } & Abortable)
     | BufferEncoding
     | null;
 }
 
+export interface MkdirParameters {
+  id: string;
+  path: string;
+  mode?: number;
+}
+
+export interface ChmodParameters {
+  id: string;
+  path: string;
+  mode: number;
+}
+
 // Define the command structure (discriminated union)
 export type FileOperation =
   | { command: "read"; readParameters: ReadParams }
-  | { command: "write"; writeParameters: WriteParameters };
+  | { command: "write"; writeParameters: WriteParameters }
+  | { command: "mkdir"; mkdirParameters: MkdirParameters }
+  | { command: "chmod"; chmodParameters: ChmodParameters };
 
 // Define the result structure
 export interface FileOperationResult {
-  command: "read" | "write";
+  command: "read" | "write" | "mkdir" | "chmod";
   success: boolean;
   data?: string | Buffer<ArrayBufferLike>; // For read success
   error?: string; // For failures
@@ -99,7 +108,49 @@ async function writeFileOperation(
   }
 }
 
-// Make the Store driver
+// Named function for mkdir operation
+async function mkdirFileOperation(
+  params: MkdirParameters
+): Promise<FileOperationResult> {
+  try {
+    await fs.mkdir(params.path, { recursive: true, mode: params.mode });
+    return {
+      command: "mkdir",
+      success: true,
+      id: params.id,
+    };
+  } catch (err: unknown) {
+    return {
+      command: "mkdir",
+      success: false,
+      error: (err as Error).message,
+      id: params.id,
+    };
+  }
+}
+
+// Named function for chmod operation
+async function chmodFileOperation(
+  params: ChmodParameters
+): Promise<FileOperationResult> {
+  try {
+    await fs.chmod(params.path, params.mode);
+    return {
+      command: "chmod",
+      success: true,
+      id: params.id,
+    };
+  } catch (err: unknown) {
+    return {
+      command: "chmod",
+      success: false,
+      error: (err as Error).message,
+      id: params.id,
+    };
+  }
+}
+
+// Make the File driver
 export function makeFileOperationDriver(): FileDriver {
   return function FileOperationDriver(
     sink: Stream<FileOperation>
@@ -109,8 +160,12 @@ export function makeFileOperationDriver(): FileDriver {
       .map((cmd) => {
         if (cmd.command === "read") {
           return xs.fromPromise(readFileOperation(cmd.readParameters));
-        } else {
+        } else if (cmd.command === "write") {
           return xs.fromPromise(writeFileOperation(cmd.writeParameters));
+        } else if (cmd.command === "mkdir") {
+          return xs.fromPromise(mkdirFileOperation(cmd.mkdirParameters));
+        } else {
+          return xs.fromPromise(chmodFileOperation(cmd.chmodParameters));
         }
       })
       .flatten();
