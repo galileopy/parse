@@ -1,20 +1,9 @@
 import { Stream } from "xstream";
-import { Driver } from "@cycle/run";
-
-// Define the command structure
-export interface TerminationCommand {
-  command: "quit";
-}
-
-// Define source and sink types
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TerminationSources {}
-
-// Define the driver type
-export type TerminationDriver = Driver<
-  Stream<TerminationCommand>,
-  TerminationSources
->;
+import {
+  TerminationDriver,
+  TerminationCommand,
+  TerminationSources,
+} from "./types";
 
 // Make the Termination driver
 export function makeTerminationDriver(): TerminationDriver {

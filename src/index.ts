@@ -1,12 +1,13 @@
 import { Drivers, setup } from "@cycle/run";
-import { makeREPLDriver, REPLDriver } from "./drivers/repl";
-import { FileDriver, makeFileOperationDriver } from "./drivers/files";
-import {
-  makeTerminationDriver,
-  TerminationDriver,
-} from "./drivers/termination";
-import { main } from "./main";
 
+import { FileDriver, FileOperationModule } from "./modules/files";
+import { REPLDriver, REPLModule } from "./modules/repl";
+import {
+  TerminationModule,
+  type TerminationDriver,
+} from "./modules/termination";
+
+import { main } from "./main";
 interface AppDrivers extends Drivers {
   REPL: REPLDriver;
   Files: FileDriver;
@@ -15,13 +16,13 @@ interface AppDrivers extends Drivers {
 
 // Define drivers with explicit typing
 const drivers: AppDrivers = {
-  REPL: makeREPLDriver(),
-  Files: makeFileOperationDriver(),
-  Termination: makeTerminationDriver(),
+  REPL: REPLModule.makeDriver(),
+  Files: FileOperationModule.makeDriver(),
+  Termination: TerminationModule.makeDriver(),
 };
 
 // Run the Cycle.js application
 const { sources, sinks, run } = setup(main, drivers);
 const dispose = run(); // Executes the application
 
-export { sources, sinks, dispose };
+export { dispose, sinks, sources };

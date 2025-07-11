@@ -29,7 +29,7 @@
     "code-helper"
   ],
   "engines": {
-    "node": "^22.16.0"
+    "node": "^24.2.0"
   },
   "author": "Galileo Sánchez",
   "license": "GPL-3.0-or-later",

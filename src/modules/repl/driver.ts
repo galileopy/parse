@@ -1,14 +1,6 @@
 import xs, { Stream } from "xstream";
 import { createInterface, Interface } from "readline";
-import { Driver } from "@cycle/run";
-
-// Define types for driver streams
-export interface REPLSources {
-  Line: Stream<string>;
-}
-
-// Define the driver type to match Cycle.js expectations
-export type REPLDriver = Driver<Stream<string>, REPLSources>;
+import { REPLDriver, REPLSources } from "./types";
 
 // Make the REPL driver
 export function makeREPLDriver(): REPLDriver {
