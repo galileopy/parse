@@ -3,7 +3,7 @@ import { createInterface, Interface } from "readline";
 import { REPLDriver, REPLSources } from "./types";
 
 // Make the REPL driver
-export function makeREPLDriver(): REPLDriver {
+export function makeDriver(): REPLDriver {
   return function REPLDriver(sink: Stream<string>): REPLSources {
     // Create readline interface
     const rl: Interface = createInterface({

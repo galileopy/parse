@@ -1,10 +1,4 @@
-import { inputFilter, inputToCommand } from "./api";
-import { makeTerminationDriver } from "./driver";
+import { makeDriver } from "./driver";
 
+export default { makeDriver };
 export type * from "./types";
-
-export const TerminationModule = {
-  inputFilter,
-  inputToCommand,
-  makeDriver: makeTerminationDriver,
-};

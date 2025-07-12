@@ -1,5 +1,6 @@
-import { FileOperation, FileOperationResult } from "./types";
-import { InvalidCommandInput } from "./error";
+import { FileOperation, FileOperationResult } from "../../modules/filesystem";
+import { InvalidCommandInput } from "../../errors/invalid-command-input.error";
+import { FilesSources, FilesOutput } from "./types";
 
 // Parse REPL input into FileOperation commands
 export function inputToCommand(
@@ -47,3 +48,18 @@ export const resultToOutput = (result: FileOperationResult) => {
     return `Error [${result.id}] in ${result.command}: ${result.error}`;
   }
 };
+
+export function Files(sources: FilesSources): FilesOutput {
+  const { REPL, Files } = sources;
+  const tempCommand$ = REPL.Line.filter(inputFilter).map(inputToCommand);
+  return {
+    command$: tempCommand$.filter(
+      (command): command is FileOperation =>
+        !(command instanceof InvalidCommandInput)
+    ),
+    error$: tempCommand$.filter(
+      (command) => command instanceof InvalidCommandInput
+    ),
+    output$: Files.Result.map(resultToOutput),
+  };
+}

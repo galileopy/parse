@@ -4,7 +4,7 @@ import { readFileOperation } from "./read.operation";
 import { writeFileOperation } from "./write.operation";
 
 // Make the Store driver
-export function makeFileOperationDriver(): FileDriver {
+export function makeDriver(): FileDriver {
   return function FileOperationDriver(
     sink: Stream<FileOperation>
   ): FileSources {

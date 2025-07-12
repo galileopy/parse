@@ -1,6 +1,7 @@
 import { Driver } from "@cycle/run";
 import { Abortable } from "events";
 import { OpenMode, ObjectEncodingOptions, Mode } from "fs";
+
 import { Stream } from "xstream";
 
 // Define parameters for read and write operations

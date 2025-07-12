@@ -6,7 +6,7 @@ import {
 } from "./types";
 
 // Make the Termination driver
-export function makeTerminationDriver(): TerminationDriver {
+export function makeDriver(): TerminationDriver {
   return function TerminationDriver(
     sink: Stream<TerminationCommand>
   ): TerminationSources {
