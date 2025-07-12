@@ -2,10 +2,10 @@
   "name": "@galileopy/parse",
   "version": "0.0.1",
   "description": "Parse: A CLI tool using LLMs for code suggestions, debugging, and automation.",
-  "main": "dist/index.js",
+  "main": "dist/main.js",
   "type": "commonjs",
   "bin": {
-    "parse": "./dist/index.js"
+    "parse": "./dist/main.js"
   },
   "files": [
     "dist",
@@ -14,7 +14,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "dev": "ts-node-dev  src/index.ts",
+    "dev": "ts-node-dev  src/main.ts",
     "lint": "eslint 'src/**/*.{js,ts}' --fix",
     "format": "prettier --write 'src/**/*.{js,ts}'"
   },

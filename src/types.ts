@@ -1,5 +1,6 @@
-import { Stream } from "xstream";
+export type CommandHandler = (args: string[]) => Promise<string | void>;
 
-export interface ApplicationOutput {
-  output$: Stream<string>;
+export interface AuthConfig {
+  provider: string;
+  apiKey: string;
 }

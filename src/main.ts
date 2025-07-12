@@ -1,48 +1,55 @@
-import xs, { Stream } from "xstream";
-import { REPLSources } from "./modules/repl/types";
-import { FileOperation, FileSources } from "./modules/filesystem";
+import readline from "readline";
+import { commands } from "./commands";
+import { getConfig, loadConfig } from "./config";
 
-import { TerminationCommand, TerminationSources } from "./modules/termination";
-import { Help } from "./components/help";
-import { Quit } from "./components/quit";
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  prompt: "Parse > ",
+});
 
-import { Echo } from "./components/echo";
-import { Files } from "./components/files";
+async function main() {
+  try {
+    await loadConfig();
+    const config = getConfig();
+    console.log(`Authenticated with ${config ? config.provider : "unknown"}.`);
+  } catch (err: unknown) {
+    const message = (err as Error).message;
+    if (message.startsWith("Invalid API key")) {
+      console.log(message + " Use /login to update.");
+    } else if (message.startsWith("Config not found")) {
+      console.log("No authentication found. Use /login <provider> <apiKey>.");
+    } else {
+      console.log(`Startup error: ${message}`);
+    }
+  }
+  rl.prompt();
+  rl.on("line", async (line) => {
+    const input = line.trim();
+    if (input === "") {
+      rl.prompt();
+      return;
+    }
+    if (!input.startsWith("/")) {
+      console.log(`Echo: ${input}`);
+      rl.prompt();
+      return;
+    }
 
-// Define sources and sinks for the main function
-export interface Sources {
-  REPL: REPLSources;
-  Files: FileSources;
-  Termination: TerminationSources;
-}
+    const parts = input.slice(1).split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
 
-export interface Sinks {
-  REPL: Stream<string>;
-  Files: Stream<FileOperation>;
-  Termination: Stream<TerminationCommand>;
-}
+    const handler = commands[cmd];
+    if (handler) {
+      const result = await handler(args);
+      if (result) console.log(result);
+    } else {
+      console.log(`Unknown command: /${cmd}. Use /help.`);
+    }
 
-// Main function to process REPL input and produce output
-export function main(sources: Sources): Sinks {
-  const { REPL } = sources;
-
-  // file application
-  const files = Files(sources);
-  const help = Help({
-    REPL,
-    props: {
-      internal$: files.error$.mapTo("read|write"),
-    },
+    if (cmd !== "quit" && cmd !== "exit") rl.prompt();
   });
-  const echo = Echo({ REPL });
-  const quit = Quit({ REPL });
-
-  // Combine all REPL outputs
-  const replOutput$ = xs.merge(files.output$, echo.output$, help.output$);
-
-  return {
-    REPL: replOutput$,
-    Files: files.command$,
-    Termination: quit.command$,
-  };
 }
+
+main();
