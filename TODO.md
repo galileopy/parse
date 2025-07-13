@@ -7,13 +7,13 @@
 
 1. ~~**Initial Setup and Prototype**:~~
 
-   - Implement the initial xstream dialog with an echo sink to test the basic event loop.
-   - Set up the TypeScript project with `xstream` and `readline` for CLI input.
+   - Implement the initial dialog with an echo to test the basic loop.
+   - Set up the TypeScript project with `readline` for CLI input.
 
-2. ~~** Initial system drivers **~~
+2. ~~** Initial system modules **~~
 
-   - Setup File Driver to perform read and write file operations
-   - Setup Termination Driver to allow quitting the REPL
+   - Setup File module to perform read and write file operations
+   - Setup Termination to allow quitting the REPL
 
 3. **Authentication and API Integration**:
 
@@ -44,9 +44,8 @@
 
 7. **System Considerations**:
 
-   - Study Cycle.js to understand and implement necessary drivers for the application.
-   - Ensure the system design prevents circular function invocation loops, possibly through static analysis or careful stream management.
-   - Add delays to streams where necessary to handle timing issues.
+   - Ensure the system design prevents circular function invocation loops, possibly through static analysis or careful management.
+   - Add delays where necessary to handle timing issues.
    - Implement state management where the state acts as both a sink and a source, ensuring the feedback loop is correctly managed.
 
 8. **Extensibility and Plugins**:

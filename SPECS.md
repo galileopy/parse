@@ -15,7 +15,7 @@
    - **Command**: Special CLI commands (e.g., `login`, `exit`, `clear`, `free`, `pick model`).
    - The system must be extensible to support additional event types.
 3. **Event Handling**:
-   - Events are processed as a stream using xstream.
+   - Events are processed asynchronously using modular handlers.
    - Each event triggers a series of operations (e.g., API calls, UI updates, or state changes).
    - The system supports branching logic (e.g., user input may lead to an LLM response or a command execution).
 4. **Authentication**:
@@ -25,93 +25,89 @@
 5. **Extensibility**:
    - New event types and actions can be added without modifying core logic.
    - Modular design for integrating new tools, commands, or providers.
-6. **Functional Reactive Style**:
-   - Uses FRP principles: immutable data, pure functions, and reactive streams.
-   - Avoids side effects in core logic, isolating them to specific sinks (e.g., console output, API calls).
+6. **Simple Async Style**:
+   - Uses async/await for handling inputs and responses.
+   - Avoids complex reactive frameworks; keeps logic pure with modular functions.
 
 ### Non-Functional Requirements
 
 1. **Language**: TypeScript for type safety and maintainability.
-2. **Stream Library**: xstream for lightweight, reactive stream processing.
-3. **CLI Interface**:
+2. **CLI Interface**:
    - Simple, text-based UI using Node.js (e.g., `readline` for input).
    - Clear feedback to the user (e.g., responses, errors, prompts).
-4. **Performance**: Low latency for user interactions; asynchronous handling of API calls.
-5. **Error Handling**: Graceful recovery from errors (e.g., API failures, invalid input).
-6. **Modularity**: Code organized for reusability and testing.
+3. **Performance**: Low latency for user interactions; asynchronous handling of API calls.
+4. **Error Handling**: Graceful recovery from errors (e.g., API failures, invalid input).
+5. **Modularity**: Code organized for reusability and testing.
 
 ---
 
 ## Specification: Main Conversation Loop
 
-The main conversation loop is modeled as a **Dialogue** (per Cycle.js’s abstraction), where the system and user engage in a back-and-forth exchange. The loop is implemented as a series of operations over an event stream, using xstream to manage events and TypeScript for type safety. Below is a detailed specification, focusing on implementation details.
+The main conversation loop is implemented as a simple async loop using `readline` in `main.ts`, where the system and user engage in a back-and-forth exchange. User input is processed directly, and the system responds with outputs like LLM responses, tool results, or prompts.
 
 ### 1. Architecture Overview
 
-- **Dialogue Abstraction**: The user and system exchange “utterances” (events). User input is an utterance, and the system responds with utterances like LLM responses, tool outputs, or prompts.
-- **Event Stream**: A single xstream stream (`event$`) carries all events (e.g., `UserInput`, `LLMResponse`, `ToolCall`). Events are processed reactively, with operations mapped to appropriate handlers.
+- **Loop Abstraction**: User inputs are handled sequentially in an async callback, with commands dispatched to handlers and prompts sent to LLM.
+- **Event Handling**: Inputs are parsed and routed to modular functions (e.g., from `commands.ts`).
 - **Sources and Sinks**:
   - **Sources**: User input (CLI), API responses, tool outputs.
   - **Sinks**: Console output, API requests, tool executions, state updates.
-- **FRP Approach**: Events are transformed using pure functions (e.g., `map`, `filter`, `fold`). Side effects (e.g., printing to console, API calls) are isolated to sinks.
+- **Async Approach**: Events are transformed using async functions. Side effects (e.g., printing to console, API calls) are isolated to specific modules.
 
 ### 2. Event Model
 
 Events are represented as a discriminated union in TypeScript for type safety and extensibility. Each event has a `type` and a `payload`.
 
+### 3. Loop Setup
 
-### 3. Stream Setup with xstream
-
-The main conversation loop is driven by an xstream stream (`event$`) that merges multiple event sources. Each source emits `ParseEvent` objects.
-
+The main conversation loop is driven by `readline`'s "line" event in `main.ts`, merging inputs and processing them asynchronously.
 
 ### 4. Conversation Loop Logic
 
-The loop processes events reactively, transforming `event$` into sinks (e.g., console output, API requests). The Dialogue abstraction is implemented as a cycle of:
-
-- **User utterance** (input) → System processing → **System utterance** (output) → Wait for next user input.
+The loop processes inputs directly, transforming them into outputs.
 
 #### Steps:
 
-1. **Filter Events**: Split `event$` into substreams by event type (e.g., `userInput$`, `command$`, `llmResponse$`).
-2. **Map to Actions**: Transform events into actions (e.g., API calls, console outputs) using pure functions.
-3. **Handle Side Effects**: Route actions to sinks (e.g., print to console, send API request).
-4. **Maintain State**: Use `fold` to track context (e.g., conversation history, authentication status).
+1. **Parse Inputs**: Check if command (starts with `/`) or prompt.
+2. **Dispatch to Handlers**: Use modular functions for commands or LLM calls.
+3. **Handle Side Effects**: Route to console or external calls.
+4. **Maintain State**: Use simple cached variables (e.g., for config).
 
 #### Implementation:
 
+Keep the existing `main.ts` structure, extending with new handlers as needed.
+
 ### 5. Extensibility
 
-- **New Event Types**: Add new interfaces to the `ParseEvent` union (e.g., `CustomToolEvent`).
-- **New Handlers**: Extend `commandToAction$` or add new substreams (e.g., `customTool$`) with `switch` or pattern matching.
-- **New Providers**: Update `apiRequest$` to support different endpoints based on `state.auth.provider`.
-- **Plugins**: Allow external modules to register new event types and handlers via a plugin system.
+- **New Event Types**: Add new interfaces to a potential `ParseEvent` union (e.g., `CustomToolEvent`).
+- **New Handlers**: Extend command map or add conditionals in the loop.
+- **New Providers**: Update API calls to support different endpoints based on state.
+- **Plugins**: Allow external modules to register new handlers via a registry.
 
 ### 6. Authentication
 
-- **Login Command**: Prompts for an API token, stores it in `state.auth`.
+- **Login Command**: Prompts for an API token, stores it in state.
 - **Provider Support**: Use a provider registry (e.g., `{ 'xAI': { url, authMethod } }`) to handle different APIs.
-- **Token Refresh**: Add a `TokenRefreshEvent` for providers requiring periodic re-authentication.
+- **Token Refresh**: Add handling for providers requiring re-authentication.
 
 ### 7. Error Handling
 
-- **Invalid Input**: Filter and respond with error messages (e.g., “Invalid command”).
-- **API Failures**: Catch errors in `apiRequest$` and emit `ConsoleOutput` events.
-- **Stream Errors**: Use xstream’s error handling (e.g., `addListener({ error })`).
+- **Invalid Input**: Respond with error messages (e.g., “Invalid command”).
+- **API Failures**: Catch and log errors.
+- **Loop Errors**: Use try/catch in the input handler.
 
 ### 8. CLI Interface
 
 - **Input**: Use Node.js `readline` for non-blocking input.
 - **Output**: Print responses, errors, and prompts to `stdout`.
-- **Prompt**: Display a `>` or `Parse>` prompt after each system utterance.
+- **Prompt**: Display a `>` or `Parse>` prompt after each response.
 
 ---
 
 ## Implementation Notes
 
-- **Type Safety**: Use TypeScript’s discriminated unions and strict typing to ensure event handling is robust.
-- **FRP Purity**: Keep transformations pure; isolate side effects to sinks.
-- **Testing**: Write unit tests for event handlers using xstream’s `MemoryStream` and Jest.
-- **Modularity**: Split code into modules (e.g., `events.ts`, `handlers.ts`, `sinks.ts`).
-- **Performance**: Use xstream’s lightweight operators; debounce or throttle input if needed.
-
+- **Type Safety**: Use TypeScript’s discriminated unions and strict typing to ensure handling is robust.
+- **Purity**: Keep functions pure where possible; isolate side effects.
+- **Testing**: Write unit tests for handlers using Jest.
+- **Modularity**: Split code into modules (e.g., `events.ts`, `handlers.ts`).
+- **Performance**: Use async/await; debounce input if needed.
