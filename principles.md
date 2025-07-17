@@ -8,3 +8,9 @@ This document outlines key principles for maintaining code quality, consistency,
 4. **Incremental Changes**: Updates should be small, testable, and keep the system functional. Include tests for each change.
 5. **User-Friendly CLI**: Errors/notifications should be clear and actionable in the REPL, but internal logic fails hard.
 6. **Test Colocation and Coverage**: Place \*.test.ts beside sources, cover happy/error paths, use isolation (e.g., temp dirs, no state bleed).
+
+## Code Organization and Architecture
+
+- **Object-Oriented Programming (OOP) with Dependency Injection (DI)**: Structure the codebase using classes implementing interfaces for services (e.g., IConfigService, ILlmService). Use constructor-based DI to decouple modules, promoting reusability, testability, and adherence to SOLID principles (e.g., Single Responsibility via focused classes, Dependency Inversion via interfaces).
+- **Encapsulation and Abstraction**: Encapsulate state and logic within classes (e.g., private cachedConfig in ConfigService); expose only necessary public methods. Avoid global state; use cached instances where appropriate.
+- **Async Loop and Event Handling**: Maintain the REPL as a simple async loop with readline in ReplOrchestrator, dispatching inputs to modular handlers without complex frameworks.
