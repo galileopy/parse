@@ -1,19 +1,28 @@
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
-import { xAIChatEntry } from "./types";
-import { getConfigDir } from "./config";
+import { xAIChatEntry, IConfigService, IStorageService } from "./types";
 
-let db: Low<{ chats: xAIChatEntry[] }>;
+export class StorageService implements IStorageService {
+  private db!: Low<{ chats: xAIChatEntry[] }>;
 
-export async function initDb() {
-  const adapter = new JSONFile<{ chats: xAIChatEntry[] }>(
-    `${getConfigDir()}/history.json`
-  );
-  db = new Low(adapter, { chats: [] });
-  await db.read();
-}
+  constructor(private configService: IConfigService) {}
 
-export async function saveSession(entry: xAIChatEntry) {
-  db.data.chats.push(entry);
-  await db.write();
+  async initDb(): Promise<void> {
+    const adapter = new JSONFile<{ chats: xAIChatEntry[] }>(
+      `${this.configService.getConfigDir()}/history.json`
+    );
+    this.db = new Low(adapter, { chats: [] });
+    await this.db.read();
+  }
+
+  async saveSession(entry: xAIChatEntry): Promise<void> {
+    this.db.data.chats.push(entry);
+    await this.db.write();
+  }
+
+
+  async getChats(): Promise<xAIChatEntry[]> {
+    await this.db.read(); // Ensure fresh read
+    return this.db.data.chats;
+  }
 }

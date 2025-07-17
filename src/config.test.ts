@@ -1,4 +1,5 @@
-import { loadConfig, saveConfig, getConfig } from "./config";
+import { ConfigService } from "./config";
+import { IFileOpsService, ILoggerService } from "./types";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
@@ -7,14 +8,31 @@ const mockedFetch = jest.spyOn(global, "fetch") as jest.MockedFunction<
   typeof fetch
 >;
 
-describe("config", () => {
+describe("ConfigService", () => {
+  let mockedFileOpsService: jest.Mocked<IFileOpsService>;
+  let service: ConfigService;
+  let mockedLogger: jest.Mocked<ILoggerService>;
   const testConfigDir = path.join(os.tmpdir(), ".parse-test");
 
   beforeEach(async () => {
+    mockedLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      warn: jest.fn(),
+      log: jest.fn(),
+    } as jest.Mocked<ILoggerService>;
+
     await fs
       .rm(testConfigDir, { recursive: true, force: true })
       .catch(() => {});
     mockedFetch.mockReset();
+    mockedFileOpsService = {
+      readFile: jest.fn(),
+      writeFile: jest.fn(),
+      ensureDir: jest.fn(),
+    } as jest.Mocked<IFileOpsService>;
+    service = new ConfigService(mockedFileOpsService, mockedLogger);
   });
 
   afterAll(async () => {
@@ -22,15 +40,30 @@ describe("config", () => {
   });
 
   it("loads missing config", async () => {
-    await expect(loadConfig(testConfigDir)).rejects.toThrow("Config not found");
-    expect(getConfig()).toBeNull();
+    mockedFileOpsService.readFile.mockResolvedValue(
+      "File not found: config.json"
+    );
+    await expect(service.loadConfig(testConfigDir)).rejects.toThrow(
+      "Config not found"
+    );
+    expect(service.getConfig()).toBeNull();
   });
 
   it("saves and loads valid config", async () => {
     mockedFetch.mockResolvedValue({ ok: true } as Response);
-    await saveConfig("xAI", "validkey", testConfigDir);
-    await loadConfig(testConfigDir);
-    expect(getConfig()).toMatchObject({
+    mockedFileOpsService.ensureDir.mockResolvedValue();
+    mockedFileOpsService.writeFile.mockResolvedValue("Write successful.");
+    await service.saveConfig("xAI", "validkey", testConfigDir);
+
+    mockedFileOpsService.readFile.mockResolvedValue(
+      JSON.stringify({
+        provider: "xAI",
+        apiKey: "validkey",
+        preferredModel: "grok-3-mini",
+      })
+    );
+    await service.loadConfig(testConfigDir);
+    expect(service.getConfig()).toMatchObject({
       provider: "xAI",
       apiKey: "validkey",
       preferredModel: expect.any(String),
@@ -44,34 +77,33 @@ describe("config", () => {
       statusText: "Unauthorized",
     } as Response);
     await expect(
-      saveConfig("xAI", "invalidkey", testConfigDir)
+      service.saveConfig("xAI", "invalidkey", testConfigDir)
     ).rejects.toThrow("Invalid API key: 401 Unauthorized");
   });
 
   it("throws on invalid key during load", async () => {
+    mockedFileOpsService.readFile.mockResolvedValue(
+      JSON.stringify({ provider: "xAI", apiKey: "invalidkey" })
+    );
     mockedFetch.mockResolvedValue({
       ok: false,
       status: 401,
       statusText: "Unauthorized",
     } as Response);
-    await fs.mkdir(testConfigDir, { recursive: true });
-    const configPath = path.join(testConfigDir, "config.json");
-    await fs.writeFile(
-      configPath,
-      JSON.stringify({ provider: "xAI", apiKey: "invalidkey" })
-    );
-    await expect(loadConfig(testConfigDir)).rejects.toThrow(
+    await expect(service.loadConfig(testConfigDir)).rejects.toThrow(
       "Invalid API key: 401 Unauthorized"
     );
   });
 
   it("handles invalid JSON on load", async () => {
-    await fs.mkdir(testConfigDir, { recursive: true });
-    const configPath = path.join(testConfigDir, "config.json");
-    await fs.writeFile(configPath, "invalid json");
-    await expect(loadConfig(testConfigDir)).rejects.toThrow(
+    mockedFileOpsService.readFile.mockResolvedValue("invalid json");
+    await expect(service.loadConfig(testConfigDir)).rejects.toThrow(
       "Invalid config: Unexpected token"
     );
-    expect(getConfig()).toBeNull();
+    expect(service.getConfig()).toBeNull();
+  });
+
+  it("returns default model", () => {
+    expect(service.getDefaultModel()).toBe("grok-3-mini");
   });
 });
