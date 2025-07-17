@@ -1,6 +1,13 @@
 import { CommandHandler } from "./types";
 import { readFile, writeFile } from "./file-ops";
-import { saveConfig } from "./config";
+import { DEFAULT_MODEL, getConfig, saveConfig } from "./config";
+
+export const AVAILABLE_MODELS = [
+  "grok-3-mini",
+  "grok-3-mini-fast",
+  "grok-3",
+  "grok-4-0709",
+];
 
 const helpData: Record<string, string[]> = {
   read: ["Usage: /read <path>", "Reads the file at the given path."],
@@ -8,6 +15,10 @@ const helpData: Record<string, string[]> = {
   help: ["Usage: /help [command]", "Shows help for commands."],
   quit: ["Usage: /quit", "Exits the app."],
   login: ["Usage: /login <provider> <apiKey>", "Saves auth config."],
+  model: [
+    "Usage: /model [name]",
+    "Lists available models or sets preferred model.",
+  ],
 };
 
 /**
@@ -76,6 +87,39 @@ async function handleQuit(): Promise<void> {
   process.exit(0);
 }
 
+
+/**
+ * Handles /model command.
+ * @param args - Command arguments.
+ * @returns Result string.
+ */
+async function handleModel(args: string[]): Promise<string> {
+  const config = getConfig();
+  if (!config) return "No config. Use /login first.";
+
+  const availableModels = AVAILABLE_MODELS;
+
+  if (args.length === 0) {
+    return `Available models:\n\t${availableModels.join("\n\t")}\nCurrent: ${config.preferredModel || DEFAULT_MODEL}`;
+  }
+
+  if (args.length !== 1) {
+    return "Invalid: /model [name]";
+  }
+
+  const model = args[0].trim();
+  if (!availableModels.includes(model)) {
+    return `Invalid model: ${model}. Use /model to list available models.`;
+  }
+
+  try {
+    await saveConfig(config.provider, config.apiKey, undefined, model);
+    return `Preferred model set to ${model}.`;
+  } catch (err: unknown) {
+    return `Error setting model: ${(err as Error).message}`;
+  }
+}
+
 export const commands: Record<string, CommandHandler> = {
   read: handleRead,
   write: handleWrite,
@@ -83,4 +127,5 @@ export const commands: Record<string, CommandHandler> = {
   login: handleLogin,
   quit: handleQuit,
   exit: handleQuit,
+  model: handleModel,
 };

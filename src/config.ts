@@ -3,11 +3,13 @@ import os from "os";
 import { readFile, writeFile, ensureDir } from "./file-ops";
 import { AuthConfig } from "./types";
 
-function getConfigDir(dirPath?: string): string {
+export function getConfigDir(dirPath?: string): string {
   return dirPath ?? `${os.homedir()}/.parse`;
 }
 
 let cachedConfig: AuthConfig | null = null;
+
+export const DEFAULT_MODEL = "grok-3-mini";
 
 /**
  * Validates apiKey against xAI API.
@@ -59,23 +61,39 @@ export async function loadConfig(dirPath?: string): Promise<void> {
 export async function saveConfig(
   provider: string,
   apiKey: string,
-  dirPath?: string
+  dirPath?: string,
+  _preferredModel?: string
 ): Promise<void> {
   if (provider.trim() === "" || apiKey.trim() === "") {
     throw new Error("Invalid provider or apiKey.");
   }
+  const preferredModel =
+    _preferredModel ?? cachedConfig?.preferredModel ?? DEFAULT_MODEL;
+
   await validateApiKey(apiKey); // New: Pre-save validation
   const configDir = getConfigDir(dirPath);
   const configPath = `${configDir}/config.json`;
+
   await ensureDir(configDir);
-  const content = JSON.stringify({ provider, apiKey });
+
+  const content = JSON.stringify({
+    provider,
+    apiKey,
+    preferredModel,
+  });
+
   const result = await writeFile(configPath, content);
+
   if (result.startsWith("Error writing")) {
     throw new Error(result);
   }
-  cachedConfig = { provider, apiKey };
-}
 
+  cachedConfig = {
+    provider,
+    apiKey,
+    preferredModel,
+  };
+}
 /**
  * Gets cached auth config.
  * @returns Config or null.

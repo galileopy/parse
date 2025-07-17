@@ -30,7 +30,11 @@ describe("config", () => {
     mockedFetch.mockResolvedValue({ ok: true } as Response);
     await saveConfig("xAI", "validkey", testConfigDir);
     await loadConfig(testConfigDir);
-    expect(getConfig()).toEqual({ provider: "xAI", apiKey: "validkey" });
+    expect(getConfig()).toMatchObject({
+      provider: "xAI",
+      apiKey: "validkey",
+      preferredModel: expect.any(String),
+    });
   });
 
   it("throws on invalid key during save", async () => {
