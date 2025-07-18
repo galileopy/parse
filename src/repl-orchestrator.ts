@@ -4,9 +4,12 @@ import {
   ILlmService,
   ICommandService,
   IStorageService,
-  ILoggerService, // New import
+  ILoggerService,
+  ParseChatMessage,
+  ParseUsage,
+  IToolRegistry,
 } from "./types";
-import { ParseChatMessage, ParseUsage } from "./types";
+import { ToolCall } from "./providers/xai/xai.types";
 
 export class ReplOrchestrator {
   private rl: readline.Interface;
@@ -16,13 +19,16 @@ export class ReplOrchestrator {
     completion_tokens: 0,
     total_tokens: 0,
   };
+  private readonly DESTRUCTIVE_TOOLS = new Set(["rename_file", "delete_file"]);
+  private readonly MAX_TOOL_LOOPS = 2;
 
   constructor(
     private configService: IConfigService,
     private llmService: ILlmService,
     private commandService: ICommandService,
     private storageService: IStorageService,
-    private logger: ILoggerService // New: Inject logger
+    private logger: ILoggerService,
+    private toolRegistry: IToolRegistry // Added for tool execution
   ) {
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -38,17 +44,17 @@ export class ReplOrchestrator {
       const config = this.configService.getConfig();
       this.logger.info(
         `Authenticated with ${config ? config.provider : "unknown"}.`
-      ); // Updated
+      );
     } catch (err: unknown) {
       const message = (err as Error).message;
       if (message.startsWith("Invalid API key")) {
-        this.logger.error(message + " Use /login to update."); // Updated
+        this.logger.error(message + " Use /login to update.");
       } else if (message.startsWith("Config not found")) {
         this.logger.error(
           "No authentication found. Use /login <provider> <apiKey>."
-        ); // Updated
+        );
       } else {
-        this.logger.error(`Startup error: ${message}`); // Updated
+        this.logger.error(`Startup error: ${message}`);
       }
     }
     this.rl.prompt();
@@ -79,7 +85,7 @@ export class ReplOrchestrator {
 
     const result = await this.commandService.executeCommand(cmd, args);
     if (result && typeof result === "string") {
-      this.logger.info(result); // Updated: Use logger for command results
+      this.logger.info(result);
     }
 
     this.rl.prompt();
@@ -87,25 +93,90 @@ export class ReplOrchestrator {
 
   public async handlePrompt(input: string): Promise<void> {
     try {
-      const {
-        content,
-        usage: { total_tokens, prompt_tokens, completion_tokens },
-      } = await this.llmService.sendPrompt(input);
-      const usage = { total_tokens, prompt_tokens, completion_tokens };
-      this.logger.log(`Response: ${content}`); // Updated
+      this.sessionHistory.push({ role: "user", content: input });
+      const messages = [...this.sessionHistory];
+      let loopCount = 0;
 
-      this.sessionHistory.push(
-        { role: "user", content: input },
-        { role: "assistant", content, usage }
+      while (loopCount < this.MAX_TOOL_LOOPS) {
+        const response = await this.llmService.sendPrompt(messages);
+        this.logger.log(JSON.stringify(response, null, 2));
+        this.logger.log(JSON.stringify(messages, null, 2));
+        const choice = response.choices[0];
+
+        if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+          // Handle tool calls sequentially
+          for (const toolCall of choice.message.tool_calls) {
+            const result = await this.executeToolCall(toolCall);
+            messages.push({
+              role: "assistant",
+              content: choice.message.content || "",
+            });
+            messages.push({
+              role: "tool",
+              content: result,
+              tool_call_id: toolCall.id,
+            });
+          }
+          loopCount++;
+          continue;
+        }
+
+        // No tool calls: Final response
+        const { content, usage } = this.llmService.extractResult(response);
+        this.logger.log(`Response: ${content}`);
+        this.sessionHistory.push({ role: "assistant", content, usage });
+
+        this.sessionUsage.total_tokens += usage.total_tokens;
+        this.sessionUsage.prompt_tokens += usage.prompt_tokens;
+        this.sessionUsage.completion_tokens += usage.completion_tokens;
+
+        console.table({ usage, sessionUsage: this.sessionUsage });
+        break;
+      }
+
+      if (loopCount >= this.MAX_TOOL_LOOPS) {
+        this.logger.warn("Max tool loops reached; aborting.");
+      }
+    } catch (err: unknown) {
+      this.logger.error((err as Error).message);
+    }
+  }
+
+  private async executeToolCall(toolCall: ToolCall): Promise<string> {
+    const { name, arguments: argsStr } = toolCall.function;
+    const tool = this.toolRegistry.get(name);
+    if (!tool) {
+      this.logger.error(`Unknown tool: ${name}`);
+      return `Unknown tool: ${name}`;
+    }
+
+    let args: Record<string, unknown>;
+    try {
+      args = JSON.parse(argsStr);
+    } catch {
+      return `Invalid tool args for ${name}`;
+    }
+
+    if (this.DESTRUCTIVE_TOOLS.has(name)) {
+      const approval = await this.promptUserApproval(
+        `Approve ${name} with args ${JSON.stringify(args)}? (y/n): `
       );
 
-      this.sessionUsage.total_tokens += usage.total_tokens;
-      this.sessionUsage.prompt_tokens += usage.prompt_tokens;
-      this.sessionUsage.completion_tokens += usage.completion_tokens;
-
-      console.table({ usage, sessionUsage: this.sessionUsage }); // Keep table as-is (not pure log)
-    } catch (err: unknown) {
-      this.logger.error((err as Error).message); // Updated
+      if (approval.toLowerCase() !== "y") {
+        return `User denied ${name}`;
+      }
     }
+
+    this.logger.info(`Executing tool: ${name}`);
+    return await tool.execute(args);
+  }
+
+  private async promptUserApproval(question: string): Promise<string> {
+    return await new Promise((resolve) => {
+      this.rl.question(question, (response) => {
+        console.log("response in callback");
+        resolve(response);
+      });
+    });
   }
 }

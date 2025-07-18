@@ -4,6 +4,7 @@
 export interface ChatMessage {
   role: string;
   content: string;
+  tool_calls?: ToolCall[]
 }
 
 export interface ResponseFormatItem {
@@ -24,6 +25,17 @@ export interface StreamOptions {
   include_usage: boolean;
 }
 
+export interface ToolCallFunction {
+  name: string;
+  arguments: string; // JSON string of args
+}
+
+export interface ToolCall {
+  id: string;
+  type: "function";
+  function: ToolCallFunction;
+}
+
 export interface ToolChoiceFunction {
   name: string;
 }
@@ -33,18 +45,22 @@ export interface ToolChoiceObject {
   type: string;
 }
 
-export type ToolChoice = string | ToolChoiceObject;
+export type ToolChoice = "none" | "auto" | "required" | ToolChoiceObject;
 
 export interface WebSearchOptions {
   search_context_size?: number | null;
   user_location?: string | null;
 }
+export interface ToolFunction {
+  name: string;
+  description?: string;
+  parameters?: unknown; // JSON Schema
+}
 
 export interface Tool {
   // Inferred basic structure; expand as per xAI docs if needed
-  name: string;
-  description?: string;
-  parameters?: unknown;
+  type: "function";
+  function: ToolFunction;
 }
 
 export interface ChatCompletionRequest {
@@ -57,7 +73,7 @@ export interface ChatCompletionRequest {
   messages: ChatMessage[];
   model: string;
   n?: number | null;
-  parallel_tool_calls?: boolean | null;
+  parallel_function_calling?: boolean | null;
   presence_penalty?: number | null;
   reasoning_effort?: number | null; // Assuming numeric effort level
   response_format?: ResponseFormatItem[] | null;
@@ -67,7 +83,7 @@ export interface ChatCompletionRequest {
   stream?: boolean | null;
   stream_options?: StreamOptions | null;
   temperature?: number | null;
-  tool_choice?: ToolChoice[] | null;
+  tool_choice?: ToolChoice | null;
   tools?: Tool[] | null;
   top_logprobs?: number | null;
   top_p?: number | null;
@@ -121,6 +137,7 @@ export interface ChatCompletionChoice {
   index?: number;
   message: ChatMessage;
   finish_reason?: string;
+  ; // Added for tool calling
 }
 
 export interface ChatCompletionResponse {

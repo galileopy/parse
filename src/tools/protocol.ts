@@ -1,11 +1,6 @@
-export interface ITool {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-  execute(args: Record<string, unknown>): Promise<string>;
-}
+import { ITool, IToolRegistry } from "../types";
 
-export class ToolRegistry {
+export class ToolRegistry implements IToolRegistry {
   private tools: Map<string, ITool> = new Map();
 
   public register(tool: ITool): void {
@@ -23,3 +18,4 @@ export class ToolRegistry {
     return this.tools.get(name);
   }
 }
+export { ITool };
