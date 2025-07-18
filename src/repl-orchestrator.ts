@@ -1,18 +1,17 @@
 import readline from "readline";
 import {
-  xAIChatMessage,
-  xAIUsage,
   IConfigService,
   ILlmService,
   ICommandService,
   IStorageService,
   ILoggerService, // New import
 } from "./types";
+import { ParseChatMessage, ParseUsage } from "./types";
 
 export class ReplOrchestrator {
   private rl: readline.Interface;
-  private sessionHistory: xAIChatMessage[] = [];
-  private sessionUsage: xAIUsage = {
+  private sessionHistory: ParseChatMessage[] = [];
+  private sessionUsage: ParseUsage = {
     prompt_tokens: 0,
     completion_tokens: 0,
     total_tokens: 0,

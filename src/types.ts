@@ -8,26 +8,25 @@ export interface AuthConfig {
   preferredModel?: string;
 }
 
-export interface xAIUsage {
+export interface ParseUsage {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
 }
 
-export interface PromptResult {
-  content: string;
-  usage: xAIUsage;
-}
-
-export interface xAIChatMessage {
+export interface ParseChatMessage {
   role: "user" | "assistant";
   content: string;
-  usage?: xAIUsage;
+  usage?: ParseUsage;
 }
 
-export interface xAIChatEntry {
+export interface ParseChatEntry {
   sessionId: string;
-  messages: xAIChatMessage[];
+  messages: ParseChatMessage[];
+}
+export interface PromptResult {
+  content: string;
+  usage: ParseUsage;
 }
 
 export interface IFileOpsService {
@@ -59,7 +58,7 @@ export interface ICommandService {
 
 export interface IStorageService {
   initDb(): Promise<void>;
-  saveSession(entry: xAIChatEntry): Promise<void>;
+  saveSession(entry: ParseChatEntry): Promise<void>;
 }
 
 export interface ILoggerService {

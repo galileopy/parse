@@ -3,12 +3,18 @@ import {
   IConfigService,
   ILlmService,
   ILoggerService,
-} from "./types"; // Add ILoggerService import
+} from "./types";
+import { XaiProvider } from "./providers/xai/xai.provider";
+import {
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+} from "./providers/xai/xai.types";
 
 export class LlmService implements ILlmService {
   constructor(
+    private provider: XaiProvider,
     private configService: IConfigService,
-    private logger: ILoggerService // New: Inject logger
+    private logger: ILoggerService
   ) {}
 
   async sendPrompt(prompt: string): Promise<PromptResult> {
@@ -21,34 +27,29 @@ export class LlmService implements ILlmService {
     }
 
     try {
-      const response = await fetch("https://api.x.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.preferredModel || "grok-3-mini",
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
+      const request: ChatCompletionRequest = {
+        model: config.preferredModel || "grok-3-mini",
+        messages: [{ role: "user", content: prompt }],
+      };
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
+      const data: ChatCompletionResponse =
+        await this.provider.createChatCompletion(request);
 
-      const data = await response.json();
       if (!data.choices || !data.choices[0]?.message?.content) {
         throw new Error("Invalid API response format.");
       }
 
       return {
         content: data.choices[0].message.content.trim(),
-        usage: data.usage,
+        usage: {
+          prompt_tokens: data.usage?.prompt_tokens || 0,
+          completion_tokens: data.usage?.completion_tokens || 0,
+          total_tokens: data.usage?.total_tokens || 0,
+        },
       };
     } catch (err: unknown) {
       const errMsg = `Prompt failed: ${(err as Error).message}`;
-      this.logger.error(errMsg); // New: Log failures
+      this.logger.error(errMsg);
       throw new Error(errMsg);
     }
   }

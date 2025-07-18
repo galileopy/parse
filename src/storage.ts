@@ -1,6 +1,7 @@
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
-import { xAIChatEntry, IConfigService, IStorageService } from "./types";
+import { IConfigService, IStorageService } from "./types";
+import { xAIChatEntry } from "providers/types";
 
 export class StorageService implements IStorageService {
   private db!: Low<{ chats: xAIChatEntry[] }>;

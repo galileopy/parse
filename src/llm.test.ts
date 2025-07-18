@@ -1,16 +1,18 @@
 import { LlmService } from "./llm";
 import { IConfigService, ILoggerService } from "./types";
+import { XaiProvider } from "./providers/xai/xai.provider";
+import { ChatCompletionResponse } from "./providers/xai/xai.types";
 
 describe("LlmService", () => {
-  const mockedFetch = jest.spyOn(global, "fetch") as jest.MockedFunction<
-    typeof fetch
-  >;
+  let mockedProvider: jest.Mocked<XaiProvider>;
   let mockedConfigService: jest.Mocked<IConfigService>;
-  let service: LlmService;
   let mockedLogger: jest.Mocked<ILoggerService>;
+  let service: LlmService;
 
   beforeEach(() => {
-    mockedFetch.mockReset();
+    mockedProvider = {
+      createChatCompletion: jest.fn(),
+    } as unknown as jest.Mocked<XaiProvider>;
 
     mockedConfigService = {
       getConfig: jest.fn(),
@@ -28,7 +30,7 @@ describe("LlmService", () => {
       log: jest.fn(),
     } as jest.Mocked<ILoggerService>;
 
-    service = new LlmService(mockedConfigService, mockedLogger);
+    service = new LlmService(mockedProvider, mockedConfigService, mockedLogger);
   });
 
   it("throws on no config", async () => {
@@ -53,17 +55,36 @@ describe("LlmService", () => {
       provider: "xAI",
       apiKey: "key",
     });
-    mockedFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [{ message: { content: "response" } }],
-        usage: {},
-      }),
-    } as Response);
+    const mockResponse: ChatCompletionResponse = {
+      choices: [{ message: { content: "response", role: "assistant" } }],
+      created: 0,
+      id: "id",
+      model: "model",
+      object: "object",
+      usage: {
+        completion_tokens: 1,
+        prompt_tokens: 1,
+        total_tokens: 2,
+        completion_tokens_details: {
+          accepted_prediction_tokens: 0,
+          audio_tokens: 0,
+          reasoning_tokens: 0,
+          rejected_prediction_tokens: 0,
+        },
+        num_sources_used: 0,
+        prompt_tokens_details: {
+          audio_tokens: 0,
+          cached_tokens: 0,
+          image_tokens: 0,
+          text_tokens: 0,
+        },
+      },
+    };
+    mockedProvider.createChatCompletion.mockResolvedValue(mockResponse);
 
     expect(await service.sendPrompt("test prompt")).toEqual({
       content: "response",
-      usage: {},
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
     });
   });
 
@@ -72,14 +93,55 @@ describe("LlmService", () => {
       provider: "xAI",
       apiKey: "key",
     });
-    mockedFetch.mockResolvedValue({
-      ok: false,
-      status: 401,
-      statusText: "Unauthorized",
-    } as Response);
+    mockedProvider.createChatCompletion.mockRejectedValue(
+      new Error("API error: 401 Unauthorized")
+    );
 
     await expect(service.sendPrompt("test")).rejects.toThrow(
-      "API error: 401 Unauthorized"
+      "Prompt failed: API error: 401 Unauthorized"
     );
+    expect(mockedLogger.error).toHaveBeenCalledWith(
+      "Prompt failed: API error: 401 Unauthorized"
+    );
+  });
+
+  it("throws on invalid response format", async () => {
+    mockedConfigService.getConfig.mockReturnValue({
+      provider: "xAI",
+      apiKey: "key",
+    });
+    const mockResponse: ChatCompletionResponse = {
+      choices: [],
+      created: 0,
+      id: "id",
+      model: "model",
+      object: "object",
+    };
+    mockedProvider.createChatCompletion.mockResolvedValue(mockResponse);
+
+    await expect(service.sendPrompt("test")).rejects.toThrow(
+      "Invalid API response format."
+    );
+  });
+
+  it("handles null usage", async () => {
+    mockedConfigService.getConfig.mockReturnValue({
+      provider: "xAI",
+      apiKey: "key",
+    });
+    const mockResponse: ChatCompletionResponse = {
+      choices: [{ message: { content: "response", role: "assistant" } }],
+      created: 0,
+      id: "id",
+      model: "model",
+      object: "object",
+      usage: null,
+    };
+    mockedProvider.createChatCompletion.mockResolvedValue(mockResponse);
+
+    expect(await service.sendPrompt("test")).toEqual({
+      content: "response",
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+    });
   });
 });
