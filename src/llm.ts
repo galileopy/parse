@@ -3,16 +3,14 @@ import {
   IConfigService,
   ILlmService,
   ILoggerService,
-  IToolRegistry,
+  IToolMapper,
   ParseChatMessage,
 } from "./types";
 import { XaiProvider } from "./providers/xai/xai.provider";
 import {
   ChatCompletionRequest,
   ChatCompletionResponse,
-  Tool,
 } from "./providers/xai/xai.types";
-import { ITool } from "./tools/protocol";
 
 export class LlmService implements ILlmService {
   // Supported models for tools (based on docs)
@@ -23,7 +21,7 @@ export class LlmService implements ILlmService {
     private provider: XaiProvider,
     private configService: IConfigService,
     private logger: ILoggerService,
-    private toolRegistry: IToolRegistry
+    private toolMapper: IToolMapper
   ) {}
 
   async sendPrompt(
@@ -49,19 +47,8 @@ export class LlmService implements ILlmService {
     try {
       const selectedModel = model || config.preferredModel || "grok-3-mini";
 
-      const itools: ITool[] = this.toolRegistry.getAll();
-      const tools: Tool[] | undefined =
-        itools.length > 0
-          ? itools.map((tool) => ({
-              type: "function",
-              function: {
-                name: tool.name,
-                description: tool.description,
-                parameters: tool.parameters,
-              },
-            }))
-          : undefined;
-      const toolChoice = tools ? "auto" : "none";
+      const tools = this.toolMapper.getPreparedTools();
+      const toolChoice = tools.length > 0 ? "auto" : "none";
 
       this.logger.debug(
         `Transformed tools for request: ${JSON.stringify(tools, null, 2)}`

@@ -16,6 +16,11 @@ import {
   DeleteFileTool,
   TreeDirTool,
 } from "./tools/file";
+import { ChatHistoryService } from "./services/chat-history.service";
+import { ToolMapperService } from "./services/tool-mapper.service";
+import { EventManager } from "./events/event-manager";
+import { StorageListener } from "./events/storage-listener";
+import { ParseChatMessage } from "./types";
 
 // Bootstrap: Create instances with DI chain
 const logger = new LoggerService();
@@ -24,14 +29,25 @@ const configService = new ConfigService(fileOpsService, logger);
 const xaiProvider = new XaiProvider(configService, logger);
 const toolRegistry = new ToolRegistry();
 
+const toolMapperService = new ToolMapperService(toolRegistry);
 const llmService = new LlmService(
   xaiProvider,
   configService,
   logger,
-  toolRegistry
+  toolMapperService
 );
 const commandService = new CommandService(configService, fileOpsService);
 const storageService = new StorageService(configService);
+
+const eventManager = new EventManager(logger);
+const storageListener = new StorageListener(storageService, logger);
+
+eventManager.subscribe<ParseChatMessage>(
+  ChatHistoryService.NEW_MESSAGE_EVENT,
+  storageListener.handleEvent
+);
+
+const chatHistoryService = new ChatHistoryService(eventManager, logger);
 
 // Register file tools
 toolRegistry.register(new CreateFileTool(fileOpsService));
@@ -48,6 +64,7 @@ const orchestrator = new ReplOrchestrator(
   commandService,
   storageService,
   logger,
-  toolRegistry
+  toolRegistry,
+  chatHistoryService
 );
 orchestrator.start();

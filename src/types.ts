@@ -1,4 +1,4 @@
-import { ChatCompletionResponse } from "./providers/xai/xai.types";
+import { ChatCompletionResponse, Tool } from "./providers/xai/xai.types";
 
 export type CommandHandler = (args: string[]) => Promise<string | void>;
 
@@ -89,3 +89,20 @@ export interface ITool {
   parameters: Record<string, unknown>;
   execute(args: Record<string, unknown>): Promise<string>;
 }
+
+export interface IChatHistoryService {
+  append(message: ParseChatMessage): void;
+  read(): ParseChatMessage[];
+}
+
+export interface IToolMapper {
+  getPreparedTools(): Tool[];
+}
+
+export interface IEventManager {
+  subscribe<T>(eventType: string, listener: ParseEventHandler<T>): void;
+  unsubscribe<T>(eventType: string, listener: ParseEventHandler<T>): void;
+  emit<T>(eventType: string, data: T): Promise<void>;
+}
+
+export type ParseEventHandler<T> = (eventData: T) => Promise<void>;

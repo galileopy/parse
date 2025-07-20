@@ -5,15 +5,14 @@ import {
   ICommandService,
   IStorageService,
   ILoggerService,
-  ParseChatMessage,
   ParseUsage,
   IToolRegistry,
+  IChatHistoryService,
 } from "./types";
 import { ToolCall } from "./providers/xai/xai.types";
 
 export class ReplOrchestrator {
   private rl: readline.Interface;
-  private sessionHistory: ParseChatMessage[] = [];
   private sessionUsage: ParseUsage = {
     prompt_tokens: 0,
     completion_tokens: 0,
@@ -28,7 +27,8 @@ export class ReplOrchestrator {
     private commandService: ICommandService,
     private storageService: IStorageService,
     private logger: ILoggerService,
-    private toolRegistry: IToolRegistry // Added for tool execution
+    private toolRegistry: IToolRegistry,
+    private chatHistoryService: IChatHistoryService
   ) {
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -76,13 +76,6 @@ export class ReplOrchestrator {
     const cmd = parts[0].toLowerCase();
     const args = parts.slice(1);
 
-    if (cmd === "quit" || cmd === "exit") {
-      await this.storageService.saveSession({
-        sessionId: Date.now().toString(),
-        messages: this.sessionHistory,
-      });
-    }
-
     const result = await this.commandService.executeCommand(cmd, args);
     if (result && typeof result === "string") {
       this.logger.info(result);
@@ -93,25 +86,29 @@ export class ReplOrchestrator {
 
   public async handlePrompt(input: string): Promise<void> {
     try {
-      this.sessionHistory.push({ role: "user", content: input });
-      const messages = [...this.sessionHistory];
+      this.chatHistoryService.append({ role: "user", content: input });
+      const messages = this.chatHistoryService.read();
       let loopCount = 0;
 
       while (loopCount < this.MAX_TOOL_LOOPS) {
         const response = await this.llmService.sendPrompt(messages);
+
         this.logger.log(JSON.stringify(response, null, 2));
         this.logger.log(JSON.stringify(messages, null, 2));
+
         const choice = response.choices[0];
 
         if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
           // Handle tool calls sequentially
           for (const toolCall of choice.message.tool_calls) {
             const result = await this.executeToolCall(toolCall);
-            messages.push({
+
+            this.chatHistoryService.append({
               role: "assistant",
               content: choice.message.content || "",
             });
-            messages.push({
+
+            this.chatHistoryService.append({
               role: "tool",
               content: result,
               tool_call_id: toolCall.id,
@@ -124,7 +121,7 @@ export class ReplOrchestrator {
         // No tool calls: Final response
         const { content, usage } = this.llmService.extractResult(response);
         this.logger.log(`Response: ${content}`);
-        this.sessionHistory.push({ role: "assistant", content, usage });
+        this.chatHistoryService.append({ role: "assistant", content, usage });
 
         this.sessionUsage.total_tokens += usage.total_tokens;
         this.sessionUsage.prompt_tokens += usage.prompt_tokens;
