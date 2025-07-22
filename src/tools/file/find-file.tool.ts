@@ -3,7 +3,8 @@ import { IFileOpsService } from "../../types";
 
 export class FindFileTool implements ITool {
   name = "find_file";
-  description = "Finds files by name in a directory (non-recursive).";
+  description =
+    "Finds files by name in a directory (non-recursive). Returns a list of files that have 'name' in their names.  Returns false when a file is not found.";
   parameters = {
     type: "object",
     properties: {
@@ -23,9 +24,7 @@ export class FindFileTool implements ITool {
     try {
       const files = await this.fileOps.listDir(dirPath);
       const matches = files.filter((f) => f.includes(name));
-      return matches.length > 0
-        ? `Found:\n${matches.join("\n")}`
-        : "No matches found.";
+      return matches.length > 0 ? `Found:\n${matches.join("\n")}` : "false";
     } catch (err) {
       return (err as Error).message;
     }

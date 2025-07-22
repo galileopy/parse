@@ -1,15 +1,15 @@
 import readline from "readline";
+import { ToolCall } from "./providers/xai/xai.types";
 import {
+  IChatHistoryService,
+  ICommandService,
   IConfigService,
   ILlmService,
-  ICommandService,
-  IStorageService,
   ILoggerService,
-  ParseUsage,
+  IStorageService,
   IToolRegistry,
-  IChatHistoryService,
+  ParseUsage,
 } from "./types";
-import { ToolCall } from "./providers/xai/xai.types";
 
 export class ReplOrchestrator {
   private rl: readline.Interface;
@@ -87,26 +87,47 @@ export class ReplOrchestrator {
   public async handlePrompt(input: string): Promise<void> {
     try {
       this.chatHistoryService.append({ role: "user", content: input });
-      const messages = this.chatHistoryService.read();
       let loopCount = 0;
+      let previousToolCalls: ToolCall[] = []; // Track previous calls for repetition detection
 
-      while (loopCount < this.MAX_TOOL_LOOPS) {
+      while (loopCount <= this.MAX_TOOL_LOOPS) {
+        const messages = this.chatHistoryService.read();
         const response = await this.llmService.sendPrompt(messages);
+        const localReasoning = response.choices[0].message.reasoning_content;
+        this.logger.debug(`Local Reasoning: ${localReasoning}`);
+        
+        const localContent = response.choices[0].message.content;
+        if (localContent.length > 0){
 
-        this.logger.log(JSON.stringify(response, null, 2));
-        this.logger.log(JSON.stringify(messages, null, 2));
+          this.logger.debug(`Local Response: ${localContent}`);
+        }
+
+        this.logger.debug(`================ RESPONSE`);
+        this.logger.debug(JSON.stringify(response, null, 2));
+        this.logger.debug(`================ MESSAGES`);
+        this.logger.debug(JSON.stringify(messages, null, 2));
 
         const choice = response.choices[0];
 
         if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+          if (
+            this.isRepeatedToolCall(
+              previousToolCalls,
+              choice.message.tool_calls
+            )
+          ) {
+            this.logger.warn(
+              "Detected repeated tool call; breaking loop to avoid infinite repetition."
+            );
+            break;
+          }
+          previousToolCalls = choice.message.tool_calls;
+
           // Handle tool calls sequentially
           for (const toolCall of choice.message.tool_calls) {
+            this.logger.debug(`start loop:  ${loopCount}`);
+            this.logger.debug(`toolCall: ${JSON.stringify(toolCall, null, 2)}`);
             const result = await this.executeToolCall(toolCall);
-
-            this.chatHistoryService.append({
-              role: "assistant",
-              content: choice.message.content || "",
-            });
 
             this.chatHistoryService.append({
               role: "tool",
@@ -115,6 +136,8 @@ export class ReplOrchestrator {
             });
           }
           loopCount++;
+
+          this.logger.debug(`loopCount++ -> ${loopCount}`);
           continue;
         }
 
@@ -171,9 +194,28 @@ export class ReplOrchestrator {
   private async promptUserApproval(question: string): Promise<string> {
     return await new Promise((resolve) => {
       this.rl.question(question, (response) => {
-        console.log("response in callback");
         resolve(response);
       });
     });
+  }
+
+  private isRepeatedToolCall(
+    previousToolCalls: ToolCall[],
+    newToolCalls: ToolCall[]
+  ): boolean {
+    this.logger.debug("=========== isRepeatedToolCall");
+    this.logger.debug(
+      JSON.stringify({ previousToolCalls, newToolCalls }, null, 2)
+    );
+    return (
+      previousToolCalls.length === newToolCalls.length &&
+      previousToolCalls.every((previousCall, index) => {
+        const currentCall = newToolCalls[index];
+        return (
+          previousCall.function.name === currentCall.function.name &&
+          previousCall.function.arguments === currentCall.function.arguments
+        );
+      })
+    );
   }
 }

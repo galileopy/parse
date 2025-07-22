@@ -4,7 +4,9 @@
 export interface ChatMessage {
   role: string;
   content: string;
-  tool_calls?: ToolCall[]
+  reasoning_content?: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
 }
 
 export interface ResponseFormatItem {
@@ -137,7 +139,6 @@ export interface ChatCompletionChoice {
   index?: number;
   message: ChatMessage;
   finish_reason?: string;
-  ; // Added for tool calling
 }
 
 export interface ChatCompletionResponse {

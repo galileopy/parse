@@ -134,9 +134,7 @@ describe("File Tools", () => {
 
     it("no matches", async () => {
       fileOpsService.listDir.mockResolvedValue(["other.doc"]);
-      expect(await tool.execute({ path: ".", name: "test" })).toBe(
-        "No matches found."
-      );
+      expect(await tool.execute({ path: ".", name: "test" })).toBe("false");
     });
 
     it("handles error", async () => {

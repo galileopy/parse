@@ -155,4 +155,88 @@ describe("ReplOrchestrator", () => {
       expect.objectContaining({ role: "assistant", content: "final response" })
     );
   });
+
+  it("breaks loop on repeated tool calls", async () => {
+    const mockTool: ITool = {
+      name: "test_tool",
+      description: "",
+      parameters: {},
+      execute: jest.fn().mockResolvedValue("tool result"),
+    };
+    mockedToolRegistry.get.mockReturnValue(mockTool);
+
+    const repeatedToolResponse = {
+      choices: [
+        {
+          message: {
+            content: "",
+            role: "assistant",
+            tool_calls: [
+              {
+                id: "call1",
+                type: "function",
+                function: { name: "test_tool", arguments: "{}" },
+              },
+            ],
+          },
+        },
+      ],
+      usage: null,
+    } as ChatCompletionResponse;
+
+    mockedLlmService.sendPrompt
+      .mockResolvedValueOnce(repeatedToolResponse)
+      .mockResolvedValueOnce(repeatedToolResponse); // Simulate repetition
+
+    await orchestrator.handlePrompt("test with repeated tool");
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      "Detected repeated tool call; breaking loop to avoid infinite repetition."
+    );
+    expect(mockedLlmService.sendPrompt).toHaveBeenCalledTimes(2); // Called twice, but breaks before third
+  });
+
+  it("reaches max loops and warns without repetition", async () => {
+    const mockTool: ITool = {
+      name: "test_tool",
+      description: "",
+      parameters: {},
+      execute: jest.fn().mockResolvedValue("tool result"),
+    };
+    mockedToolRegistry.get.mockReturnValue(mockTool);
+
+    const toolResponse = () =>
+      ({
+        choices: [
+          {
+            message: {
+              content: "",
+              role: "assistant",
+              tool_calls: [
+                {
+                  id: "call" + Math.random(),
+                  type: "function",
+                  function: {
+                    name: "test_tool",
+                    arguments: `{ number : ${Math.random()}}`, // Different arguments to avoid repetition detection
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        usage: null,
+      }) as ChatCompletionResponse;
+
+    mockedLlmService.sendPrompt
+      .mockResolvedValue(toolResponse())
+      .mockResolvedValueOnce(toolResponse())
+      .mockResolvedValueOnce(toolResponse())
+      .mockResolvedValueOnce(toolResponse());
+
+    await orchestrator.handlePrompt("test with max loops");
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      "Max tool loops reached; aborting."
+    );
+    expect(mockedLlmService.sendPrompt).toHaveBeenCalledTimes(3);
+  });
 });

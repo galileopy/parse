@@ -10,18 +10,16 @@ import { XaiProvider } from "./providers/xai/xai.provider";
 import {
   ChatCompletionRequest,
   ChatCompletionResponse,
+  ChatMessage,
 } from "./providers/xai/xai.types";
 
 export class LlmService implements ILlmService {
-  // Supported models for tools (based on docs)
-  private readonly SYSTEM_PROMPT =
-    "You are Parse, a coding assistant specializing in file operations. Use the provided tools for tasks like checking file existence (use find_file or list_dir), listing directories, editing files, etc. Prefer tool calls over text responses for file-related queries.";
-
   constructor(
     private provider: XaiProvider,
     private configService: IConfigService,
     private logger: ILoggerService,
-    private toolMapper: IToolMapper
+    private toolMapper: IToolMapper,
+    private readonly systemPrompt: string
   ) {}
 
   async sendPrompt(
@@ -41,7 +39,10 @@ export class LlmService implements ILlmService {
 
     const requestMessages =
       messages[0]?.role !== "system"
-        ? [{ role: "system", content: this.SYSTEM_PROMPT }, ...messages]
+        ? [
+            { role: "system", content: this.systemPrompt } as ParseChatMessage,
+            ...messages,
+          ]
         : messages;
 
     try {
@@ -50,22 +51,22 @@ export class LlmService implements ILlmService {
       const tools = this.toolMapper.getPreparedTools();
       const toolChoice = tools.length > 0 ? "auto" : "none";
 
-      this.logger.debug(
-        `Transformed tools for request: ${JSON.stringify(tools, null, 2)}`
-      );
-
       const request: ChatCompletionRequest = {
         model: selectedModel,
-        messages: requestMessages.map((m) => ({
-          role: m.role,
-          content: m.content,
+        messages: requestMessages.map<ChatMessage>((message) => ({
+          role: message.role,
+          content: message.content,
+          ...(message.tool_call_id
+            ? { tool_call_id: message.tool_call_id }
+            : {}),
         })),
-        tools,
         tool_choice: toolChoice,
         parallel_function_calling: false,
       };
+      this.logger.debug("======== REQUEST");
+      this.logger.debug(JSON.stringify(request, null, 2));
 
-      return await this.provider.createChatCompletion(request);
+      return await this.provider.createChatCompletion({ ...request, tools });
     } catch (err: unknown) {
       const errMsg = `Prompt failed: ${(err as Error).message}`;
       this.logger.error(errMsg);

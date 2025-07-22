@@ -1,4 +1,8 @@
-import { ChatCompletionResponse, Tool } from "./providers/xai/xai.types";
+import {
+  ChatCompletionResponse,
+  Tool,
+  ToolCall,
+} from "./providers/xai/xai.types";
 
 export type CommandHandler = (args: string[]) => Promise<string | void>;
 
@@ -18,7 +22,7 @@ export interface ParseChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
   usage?: ParseUsage;
-  tool_call_id?: string; // Optional for tool responses
+  tool_call_id?: string;
 }
 
 export interface ParseChatEntry {

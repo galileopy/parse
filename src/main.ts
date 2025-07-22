@@ -22,6 +22,12 @@ import { EventManager } from "./events/event-manager";
 import { StorageListener } from "./events/storage-listener";
 import { ParseChatMessage } from "./types";
 
+import fs from "fs";
+import path from "path";
+const SYSTEM_PROMPT = fs
+  .readFileSync(path.resolve(__dirname, "./prompts/main_agent.md"))
+  .toString();
+
 // Bootstrap: Create instances with DI chain
 const logger = new LoggerService();
 const fileOpsService = new FileOpsService();
@@ -34,7 +40,8 @@ const llmService = new LlmService(
   xaiProvider,
   configService,
   logger,
-  toolMapperService
+  toolMapperService,
+  SYSTEM_PROMPT
 );
 const commandService = new CommandService(configService, fileOpsService);
 const storageService = new StorageService(configService);

@@ -33,7 +33,8 @@ describe("LlmService", () => {
       mockedProvider,
       mockedConfigService,
       mockedLogger,
-      mockedToolMapper
+      mockedToolMapper,
+      "SYSTEM_PROMPT"
     );
   });
 
