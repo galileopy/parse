@@ -1,5 +1,5 @@
 import { ChatCompletionResponse, Tool } from "./providers/xai/xai.types";
-import { ITool } from "./tools/protocol";
+import { ITool } from "./tools/i-tool";
 
 export type CommandHandler = (args: string[]) => Promise<string | void>;
 
@@ -100,3 +100,19 @@ export interface IEventManager {
 }
 
 export type ParseEventHandler<T> = (eventData: T) => Promise<void>;
+
+export interface IAgent {
+  processPrompt(input: string): Promise<void>;
+}
+
+export interface IUserApprovalService {
+  getApproval(question: string): Promise<string>;
+}
+
+import readline from "readline";
+export interface IReadlineService {
+  getInterface(): readline.Interface;
+  prompt(): void;
+  on(event: string, listener: (line: string) => void): void;
+  question(question: string): Promise<string>;
+}

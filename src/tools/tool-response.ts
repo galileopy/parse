@@ -16,18 +16,36 @@ export class ToolResponse {
   public readonly version: string;
 
   constructor(params: ToolResponseData) {
+    // Validate that the result is serializable
+    if (params.result !== null) {
+      try {
+        JSON.stringify(params.result, this.replacer);
+      } catch {
+        throw new Error("Result must be JSON serializable.");
+      }
+    }
     this.name = params.name;
     this.success = params.success;
     this.errors = params.errors || [];
     this.result = params.result;
     this.description = params.description;
     this.version = params.version || "1.0";
-
-    // Validate that the result is serializable
-    try {
-      JSON.stringify(this.result);
-    } catch {
-      throw new Error("Result must be JSON serializable.");
-    }
   }
+  replacer = (key: unknown, value: unknown) => {
+    if (
+      typeof key === "function" ||
+      typeof key === "symbol" ||
+      typeof key === "undefined"
+    ) {
+      throw new Error("Non-serializable key detected.");
+    }
+    if (
+      typeof value === "function" ||
+      typeof value === "symbol" ||
+      typeof value === "undefined"
+    ) {
+      throw new Error("Non-serializable value detected.");
+    }
+    return value;
+  };
 }

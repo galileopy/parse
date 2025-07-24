@@ -18,6 +18,7 @@ export class EditFileTool implements ITool {
     },
     required: ["path", "content", "mode"],
   };
+  requiresApproval = true;
 
   constructor(private fileOps: IFileOpsService) {}
 

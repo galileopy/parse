@@ -14,6 +14,7 @@ export class RenameFileTool implements ITool {
     },
     required: ["old_path", "new_path"],
   };
+  requiresApproval = true;
 
   constructor(private fileOps: IFileOpsService) {}
 

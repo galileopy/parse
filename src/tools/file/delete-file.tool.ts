@@ -13,6 +13,7 @@ export class DeleteFileTool implements ITool {
     },
     required: ["path"],
   };
+  requiresApproval = true;
 
   constructor(private fileOps: IFileOpsService) {}
 

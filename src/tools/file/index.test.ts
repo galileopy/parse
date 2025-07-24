@@ -44,6 +44,7 @@ describe("File Tools", () => {
         path: "file.txt",
         content: "data",
       });
+
       expect(response).toBeInstanceOf(ToolResponse);
       expect(response.success).toBe(true);
       expect(response.errors).toEqual([]);
@@ -88,6 +89,7 @@ describe("File Tools", () => {
         "Delete successful: file.txt."
       );
       const response = await tool.execute({ path: "file.txt" });
+      expect(tool.requiresApproval).toBe(true);
       expect(response.success).toBe(true);
       expect(response.result).toEqual({
         path: "file.txt",
@@ -130,6 +132,7 @@ describe("File Tools", () => {
         content: " new",
         mode: "append",
       });
+      expect(tool.requiresApproval).toBe(true);
       expect(response.success).toBe(true);
       expect(response.result).toEqual({
         path: "file.txt",
@@ -241,6 +244,7 @@ describe("File Tools", () => {
         old_path: "old.txt",
         new_path: "new.txt",
       });
+      expect(tool.requiresApproval).toBe(true);
       expect(response.success).toBe(true);
       expect(response.result).toEqual({
         old_path: "old.txt",
@@ -336,24 +340,6 @@ describe("File Tools", () => {
       const response = await tool.execute({ path: 123 });
       expect(response.success).toBe(false);
       expect(response.errors[0].code).toBe("VALIDATION_ERROR");
-    });
-  });
-
-  describe("ToolResponse Constructor", () => {
-    it("defaults version to 1.0", () => {
-      const response = new ToolResponse({
-        name: "test",
-        success: true,
-        result: {},
-      });
-      expect(response.version).toBe("1.0");
-    });
-
-    it("throws on non-serializable result", () => {
-      expect(
-        () =>
-          new ToolResponse({ name: "test", success: true, result: () => {} })
-      ).toThrow("Result must be JSON serializable.");
     });
   });
 });

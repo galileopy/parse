@@ -1,6 +1,6 @@
-import { ToolMapperService } from "./tool-mapper.service";
+import { ITool } from "../tools/i-tool";
 import { IToolRegistry } from "../types";
-import { ITool } from "../tools/protocol";
+import { ToolMapperService } from "./tool-mapper.service";
 
 describe("ToolMapperService", () => {
   let mockedRegistry: jest.Mocked<IToolRegistry>;
