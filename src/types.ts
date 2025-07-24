@@ -1,5 +1,6 @@
-// src/types.ts
-// (Expanded: Added interfaces for DI and abstractions)
+import { ChatCompletionResponse, Tool } from "./providers/xai/xai.types";
+import { ITool } from "./tools/protocol";
+
 export type CommandHandler = (args: string[]) => Promise<string | void>;
 
 export interface AuthConfig {
@@ -15,9 +16,10 @@ export interface ParseUsage {
 }
 
 export interface ParseChatMessage {
-  role: "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
   usage?: ParseUsage;
+  tool_call_id?: string;
 }
 
 export interface ParseChatEntry {
@@ -33,10 +35,17 @@ export interface IFileOpsService {
   readFile(filePath: string): Promise<string>;
   writeFile(filePath: string, content: string): Promise<string>;
   ensureDir(dirPath: string): Promise<void>;
+  listDir(dirPath: string): Promise<string[]>;
+  renameFile(oldPath: string, newPath: string): Promise<string>;
+  deleteFile(path: string): Promise<string>;
 }
 
 export interface ILlmService {
-  sendPrompt(prompt: string): Promise<PromptResult>;
+  sendPrompt(
+    messages: ParseChatMessage[],
+    model?: string
+  ): Promise<ChatCompletionResponse>; // Updated for history
+  extractResult(response: ChatCompletionResponse): PromptResult; // Added helper
 }
 
 export interface IConfigService {
@@ -68,3 +77,26 @@ export interface ILoggerService {
   debug(message: string): void; // Optional level for verbose output
   warn(message: string): void;
 }
+
+export interface IToolRegistry {
+  register(tool: ITool): void;
+  getAll(): ITool[];
+  get(name: string): ITool | undefined;
+}
+
+export interface IChatHistoryService {
+  append(message: ParseChatMessage): void;
+  read(): ParseChatMessage[];
+}
+
+export interface IToolMapper {
+  getPreparedTools(): Tool[];
+}
+
+export interface IEventManager {
+  subscribe<T>(eventType: string, listener: ParseEventHandler<T>): void;
+  unsubscribe<T>(eventType: string, listener: ParseEventHandler<T>): void;
+  emit<T>(eventType: string, data: T): Promise<void>;
+}
+
+export type ParseEventHandler<T> = (eventData: T) => Promise<void>;

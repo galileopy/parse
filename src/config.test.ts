@@ -31,7 +31,7 @@ describe("ConfigService", () => {
       readFile: jest.fn(),
       writeFile: jest.fn(),
       ensureDir: jest.fn(),
-    } as jest.Mocked<IFileOpsService>;
+    } as unknown as jest.Mocked<IFileOpsService>;
     service = new ConfigService(mockedFileOpsService, mockedLogger);
   });
 

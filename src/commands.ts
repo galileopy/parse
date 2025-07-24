@@ -12,7 +12,6 @@ export class CommandService implements ICommandService {
     "grok-3",
     "grok-4-0709",
   ];
-
   private readonly helpData: Record<string, string[]> = {
     read: ["Usage: /read <path>", "Reads the file at the given path."],
     write: ["Usage: /write <path> <content>", "Writes content to the file."],

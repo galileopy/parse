@@ -1,11 +1,7 @@
-export interface ITool {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-  execute(args: Record<string, unknown>): Promise<string>;
-}
+import { IToolRegistry } from "../types";
+import { ITool } from "./i-tool";
 
-export class ToolRegistry {
+export class ToolRegistry implements IToolRegistry {
   private tools: Map<string, ITool> = new Map();
 
   public register(tool: ITool): void {
