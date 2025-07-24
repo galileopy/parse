@@ -1,5 +1,6 @@
-import { ITool } from "../../tools/protocol";
 import { IFileOpsService } from "../../types";
+import { ITool } from "../i-tool";
+import { ToolResponse } from "../tool-response"; // Updated import
 
 export class EditFileTool implements ITool {
   name = "edit_file";
@@ -20,23 +21,50 @@ export class EditFileTool implements ITool {
 
   constructor(private fileOps: IFileOpsService) {}
 
-  async execute(args: Record<string, unknown>): Promise<string> {
+  async execute(args: Record<string, unknown>): Promise<ToolResponse> {
     const { path: filePath, content, mode } = args;
     if (
       typeof filePath !== "string" ||
       typeof content !== "string" ||
       typeof mode !== "string"
     ) {
-      return "Invalid arguments.";
+      return new ToolResponse({
+        name: this.name,
+        success: false,
+        errors: [{ message: "Invalid arguments.", code: "VALIDATION_ERROR" }],
+        result: null,
+        description: "Validation failed on input arguments.",
+      });
     }
     const existing = await this.fileOps.readFile(filePath);
     if (
       existing.startsWith("File not found") ||
       existing.startsWith("Error reading")
     ) {
-      return existing;
+      return new ToolResponse({
+        name: this.name,
+        success: false,
+        errors: [{ message: existing, code: "FILE_NOT_FOUND" }],
+        result: null,
+        description: "File does not exist or read error.",
+      });
     }
     const newContent = mode === "append" ? existing + content : content;
-    return await this.fileOps.writeFile(filePath, newContent);
+    const writeResult = await this.fileOps.writeFile(filePath, newContent);
+    if (writeResult.startsWith("Error writing")) {
+      return new ToolResponse({
+        name: this.name,
+        success: false,
+        errors: [{ message: writeResult, code: "WRITE_ERROR" }],
+        result: null,
+        description: "Failed to write edited content.",
+      });
+    }
+    return new ToolResponse({
+      name: this.name,
+      success: true,
+      result: { path: filePath, mode, message: writeResult },
+      description: "File edited successfully.",
+    });
   }
 }

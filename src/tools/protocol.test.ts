@@ -1,14 +1,21 @@
-import { ITool, ToolRegistry } from "./protocol";
+import { ToolRegistry } from "./protocol";
+import { ITool } from "./i-tool";
+import { ToolResponse } from "./tool-response";
 
 describe("ToolRegistry", () => {
   let registry: ToolRegistry;
+
   const mockTool: ITool = {
     name: "testTool",
     description: "Test tool",
     parameters: { type: "object", properties: {} },
-    execute: async () => "result",
+    execute: async () =>
+      new ToolResponse({
+        name: "testTool",
+        success: true,
+        result: { value: "result" },
+      }),
   };
-
   beforeEach(() => {
     registry = new ToolRegistry();
   });

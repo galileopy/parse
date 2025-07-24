@@ -5,3 +5,4 @@ export * from "./find-file.tool";
 export * from "./rename-file.tool";
 export * from "./delete-file.tool";
 export * from "./tree-dir.tool";
+export * from "./read-file.tool";

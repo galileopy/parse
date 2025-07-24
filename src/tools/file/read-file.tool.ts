@@ -1,15 +1,14 @@
-import { ITool } from "../i-tool";
-import { ToolResponse } from "../tool-response"; // Updated import
 import { IFileOpsService } from "../../types";
+import { ITool } from "../i-tool";
+import { ToolResponse } from "../tool-response";
 
-export class DeleteFileTool implements ITool {
-  name = "delete_file";
-  description =
-    "Deletes a file or directory. Note: Requires user approval in REPL.";
+export class ReadFileTool implements ITool {
+  name = "read_file";
+  description = "Reads the content of an existing file.";
   parameters = {
     type: "object",
     properties: {
-      path: { type: "string", description: "Relative path to delete." },
+      path: { type: "string", description: "Relative path to the file." },
     },
     required: ["path"],
   };
@@ -32,22 +31,24 @@ export class DeleteFileTool implements ITool {
         description: "Validation failed on input arguments.",
       });
     }
-    const result = await this.fileOps.deleteFile(filePath);
-    if (result.startsWith("Error deleting")) {
+    const content = await this.fileOps.readFile(filePath);
+    if (
+      content.startsWith("File not found") ||
+      content.startsWith("Error reading")
+    ) {
       return new ToolResponse({
         name: this.name,
         success: false,
-        errors: [{ message: result, code: "DELETE_ERROR" }],
+        errors: [{ message: content, code: "FILE_NOT_FOUND" }],
         result: null,
-        description: "Failed to delete due to error.",
+        description: "File does not exist or read error.",
       });
     }
     return new ToolResponse({
       name: this.name,
       success: true,
-      result: { path: filePath, message: result },
-      description:
-        "Deletion successful; note: no error on missing files due to force option.",
+      result: { content },
+      description: "File content read successfully.",
     });
   }
 }

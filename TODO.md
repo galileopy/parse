@@ -25,7 +25,7 @@
    - Enable parsing of user prompts and fetching responses from the LLM.
    - Implement a queue for handling multiple prompts to manage asynchronous responses.
 
-5. **Tool Protocol and Basic Tools**:
+5. ~~**Tool Protocol and Basic Tools**~~:
 
    - Define and implement a protocol for tool interactions (consider MCP or a custom protocol).
    - Implement basic tools:

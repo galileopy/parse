@@ -10,6 +10,7 @@ import {
   IToolRegistry,
   ParseUsage,
 } from "./types";
+import { ToolResponse } from "./tools/tool-response"; // Added
 
 export class ReplOrchestrator {
   private rl: readline.Interface;
@@ -95,10 +96,9 @@ export class ReplOrchestrator {
         const response = await this.llmService.sendPrompt(messages);
         const localReasoning = response.choices[0].message.reasoning_content;
         this.logger.debug(`Local Reasoning: ${localReasoning}`);
-        
-        const localContent = response.choices[0].message.content;
-        if (localContent.length > 0){
 
+        const localContent = response.choices[0].message.content;
+        if (localContent.length > 0) {
           this.logger.debug(`Local Response: ${localContent}`);
         }
 
@@ -127,11 +127,11 @@ export class ReplOrchestrator {
           for (const toolCall of choice.message.tool_calls) {
             this.logger.debug(`start loop:  ${loopCount}`);
             this.logger.debug(`toolCall: ${JSON.stringify(toolCall, null, 2)}`);
-            const result = await this.executeToolCall(toolCall);
+            const toolResponseJson = await this.executeToolCall(toolCall); // Now JSON string
 
             this.chatHistoryService.append({
               role: "tool",
-              content: result,
+              content: toolResponseJson,
               tool_call_id: toolCall.id,
             });
           }
@@ -167,14 +167,28 @@ export class ReplOrchestrator {
     const tool = this.toolRegistry.get(name);
     if (!tool) {
       this.logger.error(`Unknown tool: ${name}`);
-      return `Unknown tool: ${name}`;
+      const response = new ToolResponse({
+        name,
+        success: false,
+        errors: [{ message: `Unknown tool: ${name}`, code: "TOOL_NOT_FOUND" }],
+        result: null,
+      });
+      return JSON.stringify(response);
     }
 
     let args: Record<string, unknown>;
     try {
       args = JSON.parse(argsStr);
     } catch {
-      return `Invalid tool args for ${name}`;
+      const response = new ToolResponse({
+        name,
+        success: false,
+        errors: [
+          { message: `Invalid tool args for ${name}`, code: "PARSE_ERROR" },
+        ],
+        result: null,
+      });
+      return JSON.stringify(response);
     }
 
     if (this.DESTRUCTIVE_TOOLS.has(name)) {
@@ -183,12 +197,19 @@ export class ReplOrchestrator {
       );
 
       if (approval.toLowerCase() !== "y") {
-        return `User denied ${name}`;
+        const response = new ToolResponse({
+          name,
+          success: false,
+          errors: [{ message: `User denied ${name}`, code: "USER_DENIED" }],
+          result: null,
+        });
+        return JSON.stringify(response);
       }
     }
 
     this.logger.info(`Executing tool: ${name}`);
-    return await tool.execute(args);
+    const toolResponse = await tool.execute(args);
+    return JSON.stringify(toolResponse);
   }
 
   private async promptUserApproval(question: string): Promise<string> {

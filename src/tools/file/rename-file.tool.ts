@@ -1,5 +1,6 @@
-import { ITool } from "../../tools/protocol";
+import { ITool } from "../i-tool";
 import { IFileOpsService } from "../../types";
+import { ToolResponse } from "../../tools/tool-response";
 
 export class RenameFileTool implements ITool {
   name = "rename_file";
@@ -16,12 +17,32 @@ export class RenameFileTool implements ITool {
 
   constructor(private fileOps: IFileOpsService) {}
 
-  async execute(args: Record<string, unknown>): Promise<string> {
+  async execute(args: Record<string, unknown>): Promise<ToolResponse> {
     const { old_path, new_path } = args;
     if (typeof old_path !== "string" || typeof new_path !== "string") {
-      return "Invalid arguments.";
+      return new ToolResponse({
+        name: this.name,
+        success: false,
+        errors: [{ message: "Invalid arguments.", code: "VALIDATION_ERROR" }],
+        result: null,
+        description: "Validation failed on input arguments.",
+      });
     }
-    // Approval handled in REPL loop (Task 3); execute directly here
-    return await this.fileOps.renameFile(old_path, new_path);
+    const result = await this.fileOps.renameFile(old_path, new_path);
+    if (result.startsWith("Error renaming")) {
+      return new ToolResponse({
+        name: this.name,
+        success: false,
+        errors: [{ message: result, code: "RENAME_ERROR" }],
+        result: null,
+        description: "Failed to rename due to error (e.g., file not found).",
+      });
+    }
+    return new ToolResponse({
+      name: this.name,
+      success: true,
+      result: { old_path, new_path, message: result },
+      description: "Rename successful.",
+    });
   }
 }

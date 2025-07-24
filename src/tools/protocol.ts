@@ -1,4 +1,5 @@
-import { ITool, IToolRegistry } from "../types";
+import { IToolRegistry } from "../types";
+import { ITool } from "./i-tool";
 
 export class ToolRegistry implements IToolRegistry {
   private tools: Map<string, ITool> = new Map();
@@ -18,4 +19,3 @@ export class ToolRegistry implements IToolRegistry {
     return this.tools.get(name);
   }
 }
-export { ITool };

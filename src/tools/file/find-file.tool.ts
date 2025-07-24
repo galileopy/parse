@@ -1,10 +1,10 @@
-import { ITool } from "../../tools/protocol";
 import { IFileOpsService } from "../../types";
+import { ITool } from "../i-tool";
+import { ToolResponse } from "../tool-response";
 
 export class FindFileTool implements ITool {
   name = "find_file";
-  description =
-    "Finds files by name in a directory (non-recursive). Returns a list of files that have 'name' in their names.  Returns false when a file is not found.";
+  description = "Finds files by name in a directory (non-recursive).";
   parameters = {
     type: "object",
     properties: {
@@ -16,17 +16,37 @@ export class FindFileTool implements ITool {
 
   constructor(private fileOps: IFileOpsService) {}
 
-  async execute(args: Record<string, unknown>): Promise<string> {
+  async execute(args: Record<string, unknown>): Promise<ToolResponse> {
     const { path: dirPath, name } = args;
     if (typeof dirPath !== "string" || typeof name !== "string") {
-      return "Invalid arguments.";
+      return new ToolResponse({
+        name: this.name,
+        success: false,
+        errors: [{ message: "Invalid arguments.", code: "VALIDATION_ERROR" }],
+        result: null,
+        description: "Validation failed on input arguments.",
+      });
     }
     try {
       const files = await this.fileOps.listDir(dirPath);
       const matches = files.filter((f) => f.includes(name));
-      return matches.length > 0 ? `Found:\n${matches.join("\n")}` : "false";
+      return new ToolResponse({
+        name: this.name,
+        success: true,
+        result: { matches },
+        description:
+          matches.length > 0
+            ? "Files found matching the name."
+            : "No files found; this is a valid outcome if expected.",
+      });
     } catch (err) {
-      return (err as Error).message;
+      return new ToolResponse({
+        name: this.name,
+        success: false,
+        errors: [{ message: (err as Error).message, code: "LIST_ERROR" }],
+        result: null,
+        description: "Error listing directory.",
+      });
     }
   }
 }

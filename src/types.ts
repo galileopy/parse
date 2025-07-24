@@ -1,8 +1,5 @@
-import {
-  ChatCompletionResponse,
-  Tool,
-  ToolCall,
-} from "./providers/xai/xai.types";
+import { ChatCompletionResponse, Tool } from "./providers/xai/xai.types";
+import { ITool } from "./tools/protocol";
 
 export type CommandHandler = (args: string[]) => Promise<string | void>;
 
@@ -85,13 +82,6 @@ export interface IToolRegistry {
   register(tool: ITool): void;
   getAll(): ITool[];
   get(name: string): ITool | undefined;
-}
-
-export interface ITool {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-  execute(args: Record<string, unknown>): Promise<string>;
 }
 
 export interface IChatHistoryService {

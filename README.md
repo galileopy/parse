@@ -6,11 +6,16 @@ Parse is a command-line tool designed to assist developers with coding tasks usi
 
 ## Status
 
-As of July 12, 2025, Parse is in active development. Recent updates include authentication with the xAI API, file read/write operations, and a simple CLI REPL with commands for help, quit, and login.
+As of July 23, 2025, Parse is in active development. Recent updates include enhanced LLM integration with a reason-and-act loop for iterative problem-solving, and full availability of file management tools to the LLM for dynamic task handling.
 
-Completed: CLI REPL with readline; commands for file ops (/read, /write), help (/help), quit (/quit or /exit), and authentication (/login); API key validation and storage in ~/.parse/config.json. 
+Completed: CLI REPL with readline; commands for file ops (/read, /write), help (/help), quit (/quit or /exit), and authentication (/login); API key validation and storage in ~/.parse/config.json; Comprehensive file tools (create, edit, list, find, rename, delete, tree, read) integrated with LLM.
 
-**In Progress**: Basic LLM prompt handling and integration. Upcoming: Tool protocol for advanced features like code execution, testing, and versioning. The modular design ensures extensibility, with features like config management, file operations, and commands separated for easy maintenance.
+**In Progress**: Advanced tool protocols for code execution and testing. The modular design ensures extensibility, with features like config management, file operations, and commands separated for easy maintenance.
+
+## New Capabilities
+
+- **Reason-and-Act Loop**: The prompt system now supports a ReAct-style loop, allowing the LLM to reason about tasks, invoke tools as needed, and iterate until resolution. This enables complex, multi-step interactions without manual intervention.
+- **LLM-Available Tools**: Tools are fully integrated and callable by the LLM, including file creation, editing, reading, and directory management. This empowers automated workflows like code generation and debugging.
 
 ## Project Details
 
@@ -57,7 +62,7 @@ This launches the CLI with a `Parse >` prompt. Available commands:
 - `/login <provider> <apiKey>`: Save and validate authentication config (e.g., provider: xAI).
 - `/quit` or `/exit`: Exit the application.
 
-Non-command inputs are echoed back. Authentication loads on startup; if missing or invalid, use `/login` to set it up.
+Non-command inputs are processed by the LLM with tool support. Authentication loads on startup; if missing or invalid, use `/login` to set it up.
 
 ## Contributing
 

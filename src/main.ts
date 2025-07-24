@@ -14,7 +14,7 @@ import {
   FindFileTool,
   RenameFileTool,
   DeleteFileTool,
-  TreeDirTool,
+  TreeDirTool,ReadFileTool, 
 } from "./tools/file";
 import { ChatHistoryService } from "./services/chat-history.service";
 import { ToolMapperService } from "./services/tool-mapper.service";
@@ -64,6 +64,7 @@ toolRegistry.register(new FindFileTool(fileOpsService));
 toolRegistry.register(new RenameFileTool(fileOpsService));
 toolRegistry.register(new DeleteFileTool(fileOpsService));
 toolRegistry.register(new TreeDirTool(fileOpsService));
+toolRegistry.register(new ReadFileTool(fileOpsService));
 
 const orchestrator = new ReplOrchestrator(
   configService,
