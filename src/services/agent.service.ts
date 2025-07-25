@@ -105,6 +105,7 @@ export class Agent implements IAgent {
   public async executeToolCall(toolCall: ToolCall): Promise<string> {
     const { name, arguments: argsStr } = toolCall.function;
     const tool = this.toolRegistry.get(name);
+
     if (!tool) {
       this.logger.error(`Unknown tool: ${name}`);
       const response = new ToolResponse({

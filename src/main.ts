@@ -28,6 +28,7 @@ import { ParseChatMessage } from "./types";
 import fs from "fs";
 import path from "path";
 import { UserApprovalService } from "./services/user-approval.service";
+import { ReadlineService } from "./services/readline.service";
 const SYSTEM_PROMPT = fs
   .readFileSync(path.resolve(__dirname, "./prompts/main_agent.md"))
   .toString();
@@ -70,13 +71,8 @@ toolRegistry.register(new DeleteFileTool(fileOpsService));
 toolRegistry.register(new TreeDirTool(fileOpsService));
 toolRegistry.register(new ReadFileTool(fileOpsService));
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  prompt: "Parse > ",
-});
-
-const userApprovalService = new UserApprovalService(rl);
+const readLineService = ReadlineService.getInstance();
+const userApprovalService = new UserApprovalService(readLineService);
 
 const agent = new Agent(
   llmService,
@@ -92,6 +88,6 @@ const orchestrator = new ReplOrchestrator(
   storageService,
   logger,
   agent,
-  rl
+  readLineService
 );
 orchestrator.start();
